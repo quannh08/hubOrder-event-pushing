@@ -23,4 +23,11 @@ public class OrderEventService {
         event.setPushStatus(push_status);
         return orderEventRepository.save(event);
     }
+
+    public OrderEvent updatePushError(Long orderEventId, String push_error) {
+        OrderEvent event = orderEventRepository.findById(orderEventId)
+                .orElseThrow(() ->  new ResourceNotFoundException("Order Event not found with id :"+orderEventId));
+        event.setPushError(push_error);
+        return orderEventRepository.save(event);
+    }
 }

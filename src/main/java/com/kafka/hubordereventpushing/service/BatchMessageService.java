@@ -7,11 +7,9 @@ import com.kafka.hubordereventpushing.repository.OrderEventRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,15 +20,14 @@ public class BatchMessageService {
 
     private final OrderEventRepository orderEventRepository;
 
-    private final KafkaProducer kafkaProducer;
+    private final Producer producer;
 
     private final Gson gson;
 
     // Get 10 event unprocess for update
     @Transactional
-
     public List<OrderEvent> getEventToProcess() {
-        log.info("get Event To Process");
+        log.info("get 10 Event unprocessed to update");
         List<OrderEvent> events = orderEventRepository.findTop10UnprocessedForUpdate();
         if (!events.isEmpty()) {
             // Gán push_status = 5 và push_datetime = thời điểm hiện tại
@@ -39,9 +36,7 @@ public class BatchMessageService {
                 event.setPushDateTime(LocalDateTime.now());
             });
             orderEventRepository.saveAll(events);
-            log.info("Event To Process Complete");
         }
-
 
         if (events.isEmpty()) {
             try {
@@ -58,9 +53,8 @@ public class BatchMessageService {
 
     public void processEvent(List<OrderEventKafkaConfig> eventKafkaConfigs) {
 
-        log.info("Step 2");
         List<OrderEvent> eventToFilter = getEventToProcess();
-        log.info("process  Finished: "+eventToFilter);
+        log.info("filter events in order_event_kafka_config");
         for (OrderEvent event : eventToFilter) {
             // Duyệt cấu hình đẩy Kafka
             Optional<OrderEventKafkaConfig> matchedConfig = eventKafkaConfigs.stream()
@@ -78,8 +72,9 @@ public class BatchMessageService {
                 continue;
             } else {
                 String topic = matchedConfig.get().getKafkaTopic();
-                kafkaProducer.createTopicIfMissing(topic);
-                kafkaProducer.pushEvent(topic, event.getId(), gson.toJson(event));
+                log.info("Event with id {} processed", event.getId());
+                producer.createTopicIfMissing(topic);
+                producer.pushEvent(topic, event.getId(), gson.toJson(event));
             }
 
         }

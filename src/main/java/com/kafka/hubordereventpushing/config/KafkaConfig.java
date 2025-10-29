@@ -1,5 +1,6 @@
 package com.kafka.hubordereventpushing.config;
 
+import com.kafka.hubordereventpushing.service.ConfigLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -25,6 +26,12 @@ public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
+
+//    private String bootstrapServers = ConfigLoader.getEventKafkaServer();
+
+
+
+
     //producer
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
@@ -34,6 +41,7 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.ACKS_CONFIG, "all");
         configProps.put(ProducerConfig.RETRIES_CONFIG, 5);
+        configProps.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 100);
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         return new DefaultKafkaProducerFactory<>(configProps);
     }

@@ -1,6 +1,5 @@
 package com.kafka.hubordereventpushing.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -8,14 +7,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 //@RequiredArgsConstructor
 @Slf4j(topic = "PRODUCER-SERVICE")
-public class KafkaProducer {
+public class Producer {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private final OrderEventService orderEventService;
@@ -37,7 +33,7 @@ public class KafkaProducer {
     @Qualifier("telegramExecutor")
     private final ThreadPoolTaskExecutor executor;
 
-    public KafkaProducer(
+    public Producer(
             KafkaTemplate<String, Object> kafkaTemplate,
             OrderEventService orderEventService,
             SendToTelegram sendToTelegram, KafkaAdmin kafkaAdmin,
@@ -50,8 +46,7 @@ public class KafkaProducer {
     }
 
     public void pushEvent(String topic,Long eventId, String request) {
-        log.info("send Transaction");
-        log.info("Step 3");
+        log.info("Event with id {} send to topic {}", eventId, topic);
         kafkaTemplate.send(topic, String.valueOf(eventId), request)
         .whenComplete((result, ex) -> {
             if (ex == null) {
@@ -59,27 +54,28 @@ public class KafkaProducer {
                 log.info("Sent successfully to partition {}", result.getRecordMetadata().partition());
                 try {
                     orderEventService.updatePushStatus(eventId, 1L);
-                    log.info("update to 1"); // Chỉ in khi thành công
+                    log.info("Event with id: {} update to 1", eventId); // Chỉ in khi thành công
                 } catch (Exception e) {
                     log.error("Failed to update push status for eventId: {}", eventId, e);
                     // Có thể throw lại hoặc xử lý tiếp
                 }
-                log.info("update to 1");
             } else {
                 // gửi thất bại
 
                 log.info("Fail update to 2");
 
                 orderEventService.updatePushStatus(eventId,2L);
+                orderEventService.updatePushError(eventId, ex.getMessage());
                 executor.submit(() -> {
                     try{
+                        log.warn("Sent error to tele");
                         sendToTelegram.sendError(ex,eventId);
                     } catch (Exception e) {
                         log.error("send error", e);
                     }
 
                 });
-                 //Nghỉ 10s TRƯỚC KHI CHO PHÉP GỬI LẠI (nếu cần retry)
+                 //Nghỉ 10s TRƯỚC KHI CHO PHÉP GỬI LẠI
                 scheduler.schedule(() -> {
                     log.info("sleep 10s");
                 }, 10, TimeUnit.SECONDS);
@@ -94,7 +90,7 @@ public class KafkaProducer {
             if (!existing.contains(topicName)) {
                 NewTopic topic = TopicBuilder.name(topicName)
                         .partitions(3)
-                        .replicas(2)
+                        .replicas(1)
                         .config("retention.ms", "604800000")
                         .build();
                 adminClient.createTopics(Collections.singleton(topic));
