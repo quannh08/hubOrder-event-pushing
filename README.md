@@ -128,7 +128,8 @@ Module này có nhiệm vụ đẩy các **sự kiện đơn hàng (order event)
 - Sau mỗi **10 phút**, hệ thống **tự động reload cấu hình**.
 - Khi có lỗi đẩy Kafka, hệ thống **gửi cảnh báo qua Telegram**.
 
-Luồng hoạt động tổng quát:
+---
+
 ## ⚙️ Sơ đồ luồng xử lý (Flowchart)
 
 ```mermaid
@@ -140,12 +141,12 @@ C --> D{Còn event để xử lý?}
 D -->|Không| E[Sleep / Chờ vòng lặp kế tiếp]
 D -->|Có| F[Phân luồng xử lý từng event song song]
 
-subgraph "Thread xử lý 1 event"
+subgraph Thread_xu_ly_1_event
     F1[Đọc thông tin event]
     F2[Lấy danh sách cấu hình từ bảng ORDER_EVENT_KAFKA_CONFIG]
     F1 --> F2
     F2 --> G{Event có cấu hình phù hợp?}
-    G -->|Không| H["Cập nhật push_status = 9 - Không phù hợp cấu hình"]
+    G -->|Không| H[Cập nhật push_status = 9<br/>Không phù hợp cấu hình]
     G -->|Có| I[Gửi event đến topic Kafka tương ứng]
     I --> J{Gửi thành công?}
     J -->|Có| K[Cập nhật trạng thái thành công trong DB]
@@ -158,11 +159,8 @@ K --> N[Hoàn thành xử lý event]
 H --> N
 M --> N
 N --> D
-
 E --> D
-
 ```
-
 #### 🚀 Cách khởi chạy module:
 
 1. **Cấu hình database** trong file `application.yml`:
