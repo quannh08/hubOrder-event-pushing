@@ -20,23 +20,12 @@ public class BatchMessageService {
 
     private final OrderEventRepository orderEventRepository;
 
-    private final Producer producer;
+    private final ProducerService producerService;
 
     private final Gson gson;
 
     // Get 10 event unprocess for update
-    @Transactional
-    public List<OrderEvent> getEventToProcess() {
-        log.info("get 10 Event unprocessed to update");
-        List<OrderEvent> events = orderEventRepository.findTop10UnprocessedForUpdate();
-        if (!events.isEmpty()) {
-            // Gán push_status = 5 và push_datetime = thời điểm hiện tại
-            events.forEach(event -> {
-                event.setPushStatus(5L);
-                event.setPushDateTime(LocalDateTime.now());
-            });
-            orderEventRepository.saveAll(events);
-        }
+    public List<OrderEvent> preprocessing(List<OrderEvent> events) {
 
         if (events.isEmpty()) {
             try {
@@ -51,9 +40,9 @@ public class BatchMessageService {
         return events;
     }
 
-    public void processEvent(List<OrderEventKafkaConfig> eventKafkaConfigs) {
+    public void processEvent(List<OrderEventKafkaConfig> eventKafkaConfigs, List<OrderEvent> orderEvents) {
 
-        List<OrderEvent> eventToFilter = getEventToProcess();
+        List<OrderEvent> eventToFilter = preprocessing(orderEvents);
         log.info("filter events in order_event_kafka_config");
         for (OrderEvent event : eventToFilter) {
             // Duyệt cấu hình đẩy Kafka
@@ -73,10 +62,11 @@ public class BatchMessageService {
             } else {
                 String topic = matchedConfig.get().getKafkaTopic();
                 log.info("Event with id {} processed", event.getId());
-                producer.createTopicIfMissing(topic);
-                producer.pushEvent(topic, event.getId(), gson.toJson(event));
+                producerService.createTopicIfMissing(topic);
+                producerService.pushEvent(topic, event.getId(), gson.toJson(event));
             }
 
         }
     }
+
 }

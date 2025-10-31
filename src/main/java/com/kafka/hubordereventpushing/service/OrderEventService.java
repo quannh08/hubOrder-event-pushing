@@ -19,7 +19,7 @@ public class OrderEventService {
     public OrderEvent updatePushStatus(Long orderEventId, Long push_status) {
         OrderEvent event = orderEventRepository.findById(orderEventId)
                 .orElseThrow(() ->  new ResourceNotFoundException("Order Event not found with id :"+orderEventId));
-        log.info("update to "+event.toString());
+//        log.info("update to "+event.toString());
         event.setPushStatus(push_status);
         return orderEventRepository.save(event);
     }

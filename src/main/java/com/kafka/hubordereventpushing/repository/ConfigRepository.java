@@ -8,8 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface ConfigRepository extends JpaRepository<Config,Long> {
-    Optional<Config> findById(Long id);
-    Optional<Config> findBykey(String key);
+    Optional<Config> findByKey(String id);
 
 
 }

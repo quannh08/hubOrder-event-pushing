@@ -16,9 +16,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Config {
     @Id
-    @Column(name = "ID")
-    Long id;
-
     String key;
     String value;
 

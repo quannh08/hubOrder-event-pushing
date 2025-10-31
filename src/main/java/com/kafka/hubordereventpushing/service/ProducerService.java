@@ -12,14 +12,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+
 
 @Service
 //@RequiredArgsConstructor
 @Slf4j(topic = "PRODUCER-SERVICE")
-public class Producer {
+public class ProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private final OrderEventService orderEventService;
@@ -28,12 +26,12 @@ public class Producer {
 
     private final KafkaAdmin kafkaAdmin;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+//    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Qualifier("telegramExecutor")
     private final ThreadPoolTaskExecutor executor;
 
-    public Producer(
+    public ProducerService(
             KafkaTemplate<String, Object> kafkaTemplate,
             OrderEventService orderEventService,
             SendToTelegram sendToTelegram, KafkaAdmin kafkaAdmin,
@@ -54,7 +52,7 @@ public class Producer {
                 log.info("Sent successfully to partition {}", result.getRecordMetadata().partition());
                 try {
                     orderEventService.updatePushStatus(eventId, 1L);
-                    log.info("Event with id: {} update to 1", eventId); // Chỉ in khi thành công
+                    log.info("Event with id: {} update status to 1", eventId); // Chỉ in khi thành công
                 } catch (Exception e) {
                     log.error("Failed to update push status for eventId: {}", eventId, e);
                     // Có thể throw lại hoặc xử lý tiếp
@@ -62,13 +60,13 @@ public class Producer {
             } else {
                 // gửi thất bại
 
-                log.info("Fail update to 2");
+                log.info("Fail update status to 2");
 
                 orderEventService.updatePushStatus(eventId,2L);
                 orderEventService.updatePushError(eventId, ex.getMessage());
                 executor.submit(() -> {
                     try{
-                        log.warn("Sent error to tele");
+                        log.warn("Sent error to Tele");
                         sendToTelegram.sendError(ex,eventId);
                     } catch (Exception e) {
                         log.error("send error", e);
@@ -76,9 +74,14 @@ public class Producer {
 
                 });
                  //Nghỉ 10s TRƯỚC KHI CHO PHÉP GỬI LẠI
-                scheduler.schedule(() -> {
-                    log.info("sleep 10s");
-                }, 10, TimeUnit.SECONDS);
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    log.error("Interrupted", e);
+                }
+//                scheduler.schedule(() -> {
+//                    log.info("sleep 10s");
+//                }, 10, TimeUnit.SECONDS);
             }
         });
     }
