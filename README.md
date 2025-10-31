@@ -134,32 +134,36 @@ Module này có nhiệm vụ đẩy các **sự kiện đơn hàng (order event)
 
 ```mermaid
 flowchart TD
+    A[Start] --> B[Khởi tạo Thread Pool]
+    B --> C[Lấy 10 event chưa được xử lý từ Database]
+    C --> D{Còn event để xử lý?}
+    D -->|Không| E[Sleep / Chờ vòng lặp kế tiếp]
+    D -->|Có| F[Phân luồng xử lý từng event song song]
 
-A[Start] --> B[Khởi tạo Thread Pool]
-B --> C[Lấy 10 event chưa được xử lý từ Database]
-C --> D{Còn event để xử lý?}
-D -->|Không| E[Sleep / Chờ vòng lặp kế tiếp]
-D -->|Có| F[Phân luồng xử lý từng event song song]
+    %% ---- Subgraph cho 1 thread xử lý 1 event ----
+    subgraph Thread_xu_ly_1_event
+        F1[Đọc thông tin event]
+        F2[Lấy danh sách cấu hình từ bảng ORDER_EVENT_KAFKA_CONFIG]
+        F1 --> F2
+        F2 --> G{Event có cấu hình phù hợp?}
+        G -->|Không| H[Cập nhật push_status = 9<br/>Không phù hợp cấu hình]
+        G -->|Có| I[Gửi event đến topic Kafka tương ứng]
+        I --> J{Gửi thành công?}
+        J -->|Có| K[Cập nhật trạng thái thành công trong DB]
+        J -->|Lỗi| L[Cập nhật push_status lỗi và lưu push_error]
+        L --> M[Gửi thông báo lỗi về Telegram (CONFIG)]
+    end
+    %% --------------------------------------------
 
-subgraph Thread_xu_ly_1_event
-    F1[Đọc thông tin event]
-    F2[Lấy danh sách cấu hình từ bảng ORDER_EVENT_KAFKA_CONFIG]
-    F1 --> F2
-    F2 --> G{Event có cấu hình phù hợp?}
-    G -->|Không| H[Cập nhật push_status = 9<br/>Không phù hợp cấu hình]
-    G -->|Có| I[Gửi event đến topic Kafka tương ứng]
-    I --> J{Gửi thành công?}
-    J -->|Có| K[Cập nhật trạng thái thành công trong DB]
-    J -->|Lỗi| L[Cập nhật push_status lỗi và lưu push_error]
-    L --> M[Gửi thông báo lỗi về Telegram (CONFIG)]
-end
+    %% Kết nối từ F vào subgraph
+    F --> F1
 
-F --> F1
-K --> N[Hoàn thành xử lý event]
-H --> N
-M --> N
-N --> D
-E --> D
+    %% Kết nối ra vòng lặp
+    K --> N[Hoàn thành xử lý event]
+    H --> N
+    M --> N
+    N --> D
+    E --> D
 ```
 #### 🚀 Cách khởi chạy module:
 
