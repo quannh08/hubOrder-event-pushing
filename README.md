@@ -138,7 +138,7 @@ flowchart TD
 A[Start] --> B[Khoi tao Thread Pool]
 B --> C[Lay 10 event chua duoc xu ly tu Database]
 C --> D{Con event de xu ly?}
-D -->|Khong| E[Sleep / Cho vong lap ke tiep]
+D -->|Khong| E[Sleep 10s / Cho vong lap ke tiep]
 D -->|Co| F[Phan luong xu ly tung event song song]
 
 subgraph "Thread xu ly 1 event"
@@ -160,7 +160,7 @@ H --> N
 M --> N
 N --> D
 
-E --> D
+E --> C
 ```
 #### 🚀 Cách khởi chạy module:
 
