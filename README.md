@@ -127,9 +127,13 @@ Module này có nhiệm vụ đẩy các **sự kiện đơn hàng (order event)
 - Hệ thống có **10 worker thread** xử lý song song các sự kiện có `PUSH_STATUS = 0`.
 - Sau mỗi **10 phút**, hệ thống **tự động reload cấu hình**.
 - Khi có lỗi đẩy Kafka, hệ thống **gửi cảnh báo qua Telegram**.
-
+```
+System: HubOrder-Event-Pushing
+Time: 2025-09-24T14:30:15Z
+EventId: 123456, 123457
+Content: nội dung lỗi
+```
 ---
-
 ## ⚙️ Sơ đồ luồng xử lý (Flowchart)
 
 ```mermaid
@@ -158,7 +162,7 @@ F --> F1
 K --> N[Hoan thanh xu ly event]
 H --> N
 M --> N
-N --> D
+N --> C
 
 E --> C
 ```
@@ -173,5 +177,7 @@ E --> C
        username: <DATABASE_USERNAME>
        password: <DATABASE_PASSWORD>
        driver-class-name: oracle.jdbc.OracleDriver
-cd <thư_mục_chứa_file_jar> và chạy 
-<pre>java -jar hubOrder-event-pushing-0.0.1.jar</pre>
+cd <thư_mục_chứa_file_jar> 
+```
+java -jar hubOrder-event-pushing-0.0.1.jar
+```
